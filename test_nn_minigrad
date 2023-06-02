@@ -1,0 +1,49 @@
+import nn_matrix as mg
+from utility import print_histograms
+
+import math
+import numpy as np
+import random
+
+xs = np.array([[3,5], [5,1], [10,2]], dtype=float)
+ys = np.array([75, 82, 93], dtype=float)
+
+xs = xs / np.amax(xs, axis=0)
+ys = ys / 100 #Max test score is 100
+
+nn_mg = mg.MLP(2, [3, 1])
+
+y_pred = np.array(nn_mg.forward(xs))
+
+# print(y_pred)
+
+delta = 0.000001
+learning_rate = 0.01
+max_iterations = 10000
+prev_cost = nn_mg.cost(ys, y_pred).data
+cost = np.finfo(float).max
+iteration = 0  # счетчик итераций
+
+while iteration < max_iterations and abs(cost - prev_cost) > delta:
+    # forward pass
+    y_pred = np.array(nn_mg.forward(xs))
+
+    prev_cost = cost
+    loss = nn_mg.cost(ys, y_pred)
+
+    cost = loss.data
+    
+    # backward pass
+    for p in nn_mg.parameters():
+        p.grad = 0.0
+
+    loss.backward()
+    
+    # update
+    for p in nn_mg.parameters():
+        p.data -= learning_rate * p.grad
+
+    iteration += 1
+    
+print("it : ",  iteration, ' / ', max_iterations, ' -> ', cost)   
+print_histograms(ys, np.array([yp.data for yp in y_pred]))
