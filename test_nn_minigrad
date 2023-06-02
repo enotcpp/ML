@@ -1,4 +1,4 @@
-import nn_matrix as mg
+import nn_minigrad as mg
 from utility import print_histograms
 
 import math
@@ -15,7 +15,6 @@ nn_mg = mg.MLP(2, [3, 1])
 
 y_pred = np.array(nn_mg.forward(xs))
 
-# print(y_pred)
 
 delta = 0.000001
 learning_rate = 0.01
@@ -44,6 +43,14 @@ while iteration < max_iterations and abs(cost - prev_cost) > delta:
         p.data -= learning_rate * p.grad
 
     iteration += 1
-    
-print("it : ",  iteration, ' / ', max_iterations, ' -> ', cost)   
+
+
+print("it : ",  iteration, ' / ', max_iterations, ' -> ', cost)
+
+x_new = [3 / 10, 5 / 5]
+
+pred = nn_mg(x_new)
+
+print('pred : ', x_new, ' : ', pred)
+
 print_histograms(ys, np.array([yp.data for yp in y_pred]))
