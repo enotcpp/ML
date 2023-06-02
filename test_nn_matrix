@@ -1,0 +1,45 @@
+import nn_matrix as mx
+from utility import print_histograms
+
+import math
+import numpy as np
+import random
+
+xs = np.array(([3,5], [5,1], [10,2]), dtype=float)
+ys = np.array(([75], [82], [93]), dtype=float)
+
+xs = xs / np.amax(xs, axis=0)
+ys = ys / 100 #Max test score is 100
+
+nn_mx = mx.Neural_Network(2, 3, 1)
+
+y_pred = nn_mx.forward(xs)
+
+print_histograms(ys, y_pred)
+
+print(y_pred)
+
+delta = 0.0000001
+learning_rate = 3
+max_iterations = 1000000
+prev_cost = nn_mx.cost(xs, ys)
+cost = np.finfo(float).max
+iteration = 0  # счетчик итераций
+
+while iteration < max_iterations and abs(cost - prev_cost) > delta:
+
+    dJdW1, dJdW2, dJB1, dJB2 = nn_mx.backward(xs, ys)
+
+    nn_mx.W1 -= learning_rate * dJdW1
+    nn_mx.W2 -= learning_rate * dJdW2
+    nn_mx.B1 -= learning_rate * dJB1
+    nn_mx.B2 -= learning_rate * dJB2
+    
+    prev_cost = cost
+    cost = nn_mx.cost(xs, ys)
+
+    iteration += 1
+
+y_pred = nn_mx.forward(xs)
+
+print_histograms(ys, y_pred)
