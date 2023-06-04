@@ -1,0 +1,226 @@
+#pragma once
+
+#include <iostream>
+#include <functional>
+#include <unordered_set>
+#include <cmath>
+#include <vector>
+#include <random>
+
+class Value 
+{
+public:
+
+    Value
+    (
+        double _data, 
+        const std::unordered_set<Value*>& _children = {}, 
+        const std::string& _op = "", 
+        const std::string& _label = ""
+    ) : data(_data), grad(0.0), _backward([](){}), prev(_children), op(_op), label(_label) 
+    {}
+
+    Value& operator + (const Value& other) const 
+    {
+        Value& out = 
+            make_value
+            (
+                data + other.data, 
+                { const_cast<Value*>(this), const_cast<Value*>(&other) }, 
+                "+"
+            );
+        
+        out._backward = [&]()
+        {
+            grad += 1.0 * out.grad;
+            other.grad += 1.0 * out.grad;
+        };
+
+        return out;
+    }
+    
+    Value& operator * (const Value& other) const 
+    {
+        Value& out = 
+            make_value
+            (
+                data * other.data, 
+                { const_cast<Value*>(this), const_cast<Value*>(&other) }, 
+                "*"
+            );
+
+        out._backward = [&]()
+        {
+            grad += other.data * out.grad;
+            other.grad += data * out.grad;
+        };
+
+        return out;
+    }
+
+    Value& operator * (double other) const 
+    {
+        return *this * make_value(other);
+    }
+
+    Value& operator / (const Value& other) const 
+    {
+        return *this * (other ^ -1);  
+    }
+    
+    Value& operator ^ (double other) const 
+    {
+        Value& out = 
+            make_value
+            (
+                std::pow(data, other), 
+                { const_cast<Value*>(this) }, 
+                "^" + std::to_string(other)
+            );
+
+        out._backward = [&]() 
+        {
+            grad += other * std::pow(data, other - 1) * out.grad;
+        };
+
+        return out;
+    }
+
+    Value& operator / (double other) const 
+    {
+        return *this * make_value(1.0 / other);
+    }
+
+    Value& operator - () const 
+    {
+        return *this * make_value(-1.0);
+    }
+
+    Value& operator - (double other) const 
+    {
+        return *this + make_value(-other);
+    }
+
+    Value& operator + (double other) const 
+    {
+        return *this + make_value(other);
+    }
+
+    Value& tanh() const 
+    {
+        double x = data;
+        double t = (std::exp(2 * x) - 1) / (std::exp(2 * x) + 1);
+
+        Value& out = 
+            make_value(t, { const_cast<Value*>(this) }, "tanh");
+
+        out._backward = [&]() 
+        {
+            grad += (1 - t * t) * out.grad;
+        };
+
+        return out;
+    }
+    
+    Value& relu() const 
+    {
+        Value& out = 
+            make_value(data > 0 ? data : 0, { const_cast<Value*>(this) }, "ReLU");
+
+        out._backward = [&]()
+        {
+            grad += (out.data > 0) * out.grad;
+        };
+
+        return out;
+    }
+
+    Value& exp() const 
+    {
+        double x = data;
+
+        Value& out = 
+            make_value(std::exp(x), { const_cast<Value*>(this) }, "exp");
+
+        out._backward = [&]()
+        {
+            grad += out.data * out.grad;
+        };
+
+        return out;
+    }
+
+    void backward() 
+    {
+        std::vector<Value*> topo;
+        std::unordered_set<Value*> visited;
+
+        std::function<void(Value*)> build_topo = 
+            [&](Value* v) 
+            {
+                if(visited.find(v) == visited.end()) 
+                {
+                    visited.insert(v);
+                    
+                    for(Value* child : v->prev) 
+                    {
+                        build_topo(child);
+                    }
+                    
+                    topo.push_back(v);
+                }
+            };
+
+        build_topo(this);
+
+        grad = 1.0;
+        
+        for(auto it = topo.rbegin(); it != topo.rend(); ++it) 
+        {
+            (*it)->_backward();
+        }
+    }
+    
+    friend std::ostream& operator<<(std::ostream& os, const Value& value) 
+    {
+        os 
+            << "Value(data=" << value.data 
+            << ", grad=" << value.grad 
+            << ", op=" << value.op 
+            << ", label=" << value.label << ")";
+
+        return os;
+    }
+
+    static Value& make_value
+    (
+        double _data,
+        const std::unordered_set<Value*>& _children = {}, 
+        const std::string& _op = "", 
+        const std::string& _label = ""
+    )
+    {
+        Value& out = *new Value(_data, _children, _op, _label);    
+    
+        buffer.push_back(&out);
+
+        return out;
+    }
+
+    static std::vector<Value *>& parameters() 
+    {
+        return buffer;
+    }
+
+    double data;
+    mutable double grad;
+
+    std::function<void()> _backward;
+    std::unordered_set<Value*> prev;
+    std::string op;
+    std::string label;
+
+    static vector<Value *> buffer;
+};
+
+vector<Value *> Value::buffer;
