@@ -1,3 +1,6 @@
+// Implementation of the well-known library from Andrej Karpathy "micrograd" 
+// to the C++ language for research purposes...
+
 #pragma once
 
 #include <iostream>
