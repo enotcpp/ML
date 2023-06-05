@@ -1,3 +1,6 @@
+# Extension of the well-known library from Andrej Karpathy "micrograd" 
+# to the C++ language for research purposes ...
+
 import random
 import math
 import numpy as np
